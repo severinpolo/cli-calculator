@@ -36,48 +36,53 @@ enum Operations {
     Divide,
     Modulo,
 }
+
+const OPS: [char; 11] = ['(', ')', '/', '*', '+', '-', '%', '[', ']', '{', '}'];
 // takes spaceless String as builds calculation tree
 pub fn tokenize(instructions: String) -> Vec<String> {
-    let ops: Vec<char> = vec!['(', ')', '/', '*', '+', '-', '%', '[', ']', '{', '}'];
     let mut result: Vec<String> = Vec::new();
     let mut stream = instructions.trim().chars();
-    let mut c: char;
     let mut token = String::new();
-    loop {
-        if let Some(next_c) = stream.next() {
-            c = next_c;
-        }
-        else {
-            return result;
-        }
+    let mut is_num = false;
+    println!("{}", instructions);
 
-        if ('0'..='9').contains(&c) | (c == '.') | (c == '-') {
+    while let Some(c) = stream.next() {
+        println!("next char {}", c);
+        println!("num {}", is_num);
+        if c == ' ' {
+            println!("5");
+            continue;
+        }
+        if ('0'..='9').contains(&c) | (c == '.') {
             token.push(c);
-            loop{ 
-                if let Some(next_c) = stream.next() {
-                    c = next_c;
-                }
-                else {
-                    return result;
-                }
-                if ('0'..='9').contains(&c) | (c == '.') {
-                    token.push(c);
-                }
-                else {
-                break;
-                }
-            }
+            is_num = true;
+            println!("1");
+        } else if !is_num & (c == '-') {
+            token.push(c);
+            is_num = true;
+            println!("2");
+        } else if is_num {
+            // is not a number anymore -> terminate
+            is_num = false;
             result.push(token);
             token = String::new();
+            println!("3");
+        }
+        if !is_num & OPS.contains(&c) {
+            token.push(c);
+            result.push(token);
+            token = String::new();
+            println!("4");
             continue;
         }
-        if ops.contains(&c) {
-            result.push(c.to_string());
-            continue;
+        if token.is_empty() {
+            panic!("Encountered illegal char '{}' !", c);
         }
-        if c == ' ' {continue;}
-        panic!("Encountered illegal char '{}' !", c );
     }
+    if !token.is_empty() {
+        result.push(token);
+    }
+    return result;
 }
 
 fn main() {
@@ -116,13 +121,13 @@ mod tests {
     #[test]
     fn test_tokenize_number() {
         let instructions = "-167.89".to_owned();
-        let result: Vec<String> = vec_of_strings!("-1", "/", "+", "67", "%", "89");
+        let result: Vec<String> = vec_of_strings!("-167.89");
         assert_eq!(result, tokenize(instructions));
     }
     #[test]
     fn test_tokenize_string() {
         let instructions = "-1 / 2.45 + 67 % 89".to_owned();
-        let result: Vec<String> = vec_of_strings!("-1", "/", "2.45",  "+", "67", "%", "89");
+        let result: Vec<String> = vec_of_strings!("-1", "/", "2.45", "+", "67", "%", "89");
         assert_eq!(result, tokenize(instructions));
     }
 }
