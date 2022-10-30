@@ -9,35 +9,21 @@ struct Cli {
 }
 
 // binary operator functions
-fn mult(a: f32, b: f32) -> f32 {
-    a * b
+fn do_op(lhs: f32, op: &String, rhs: f32) -> f32 {
+    return match op.as_str() {
+        "+" => lhs + rhs,
+        "-" => lhs - rhs,
+        "%" => lhs % rhs,
+        "*" => lhs * rhs,
+        "/" => lhs / rhs,
+        _ => panic!("Operation {} not supported!", op)
+    }
 }
 
-fn div(a: f32, b: f32) -> f32 {
-    a / b
-}
+const NON_NUMBER_CHARS: [char; 11] = ['/', '*', '+', '-', '%','(', ')',  '[', ']', '{', '}'];
+const OPS: &[char] = &NON_NUMBER_CHARS[..5];
+const BRACKETS: &[char]  = &NON_NUMBER_CHARS[5..];
 
-fn add(a: f32, b: f32) -> f32 {
-    a + b
-}
-
-fn subt(a: f32, b: f32) -> f32 {
-    a - b
-}
-
-fn modulo(a: f32, b: f32) -> f32 {
-    a % b
-}
-
-enum Operations {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Modulo,
-}
-
-const OPS: [char; 11] = ['(', ')', '/', '*', '+', '-', '%', '[', ']', '{', '}'];
 // takes spaceless String as builds calculation tree
 pub fn tokenize(instructions: String) -> Vec<String> {
     let mut result: Vec<String> = Vec::new();
@@ -68,7 +54,7 @@ pub fn tokenize(instructions: String) -> Vec<String> {
             token = String::new();
             println!("3");
         }
-        if !is_num & OPS.contains(&c) {
+        if !is_num & NON_NUMBER_CHARS.contains(&c) {
             token.push(c);
             result.push(token);
             token = String::new();
@@ -83,6 +69,48 @@ pub fn tokenize(instructions: String) -> Vec<String> {
         result.push(token);
     }
     return result;
+}
+
+fn search_closing(bracket: &str, tokens: &[String], close: &str) -> usize {
+    let mut count_open = 1_u8;
+    for (i, token) in tokens.iter().enumerate() {
+        match token.as_str() {
+           close => (count_open -= 1),
+           bracket => (count_open += 1),
+           _ => ()
+        }
+        if count_open == 0 {
+            return i;
+        }
+    }
+    panic!("unclosed bracket {}", bracket); 
+    
+}
+pub fn calculate(tokens: &Vec<String>) -> f32 {
+    let mut result: f32 = 0.;
+    let mut token_iter = tokens.iter();
+    let mut idx: usize = 0;
+    while let Some(token) = token_iter.next() {
+        if let Ok(num) = token.parse::<f32>() {
+            result += num;
+            idx += 1;
+            continue;
+        } 
+        // very unsafe only correct if only ASCII chars are used!
+        if OPS.contains(&(token.as_bytes()[0] as char)) {
+            // search for next number
+            
+        }
+        let jdx: usize = match token.as_str() {
+            "(" => search_closing(")", &tokens[idx..], ")"),
+            "[" => search_closing("]", &tokens[idx..], "]"),
+            "{" => search_closing("}", &tokens[idx..], "}"),
+        }
+
+
+
+    }
+    result
 }
 
 fn main() {
