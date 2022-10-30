@@ -92,6 +92,7 @@ fn main() {
     let calc_string: String = calc.join("");
 
     let tokens = tokenize(calc_string);
+
     let result = 1.2345 as f32;
     // print the result with specified precision
     println!("{:.1$}", result, args.precision as usize);
