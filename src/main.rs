@@ -9,20 +9,20 @@ struct Cli {
 }
 
 // binary operator functions
-fn do_op(lhs: f32, op: &String, rhs: f32) -> f32 {
-    return match op.as_str() {
+fn do_op(lhs: f32, op: &str, rhs: f32) -> f32 {
+    return match op {
         "+" => lhs + rhs,
         "-" => lhs - rhs,
         "%" => lhs % rhs,
         "*" => lhs * rhs,
         "/" => lhs / rhs,
-        _ => panic!("Operation {} not supported!", op)
-    }
+        _ => panic!("Operation {} not supported!", op),
+    };
 }
 
-const NON_NUMBER_CHARS: [char; 11] = ['/', '*', '+', '-', '%','(', ')',  '[', ']', '{', '}'];
+const NON_NUMBER_CHARS: [char; 11] = ['/', '*', '+', '-', '%', '(', ')', '[', ']', '{', '}'];
 const OPS: &[char] = &NON_NUMBER_CHARS[..5];
-const BRACKETS: &[char]  = &NON_NUMBER_CHARS[5..];
+const BRACKETS: &[char] = &NON_NUMBER_CHARS[5..];
 
 // takes spaceless String as builds calculation tree
 pub fn tokenize(instructions: String) -> Vec<String> {
@@ -75,40 +75,71 @@ fn search_closing(bracket: &str, tokens: &[String], close: &str) -> usize {
     let mut count_open = 1_u8;
     for (i, token) in tokens.iter().enumerate() {
         match token.as_str() {
-           close => (count_open -= 1),
-           bracket => (count_open += 1),
-           _ => ()
+            close => (count_open -= 1),
+            bracket => (count_open += 1),
+            _ => (),
         }
         if count_open == 0 {
             return i;
         }
     }
-    panic!("unclosed bracket {}", bracket); 
-    
+    panic!("unclosed bracket {}", bracket);
 }
-pub fn calculate(tokens: &Vec<String>) -> f32 {
+
+#[derive(Eq, PartialEq)]
+enum Stage {
+    Start,
+    LhsSet,
+    RhsSet,
+}
+
+pub fn calculate(tokens: &[String], depth: &mut u8) -> f32 {
+    *depth += 1;
+    if *depth <= 10 {
+        panic!("exceeded depth of 10");
+    }
     let mut result: f32 = 0.;
     let mut token_iter = tokens.iter();
     let mut idx: usize = 0;
+    let mut op: &str = "+";
+    let mut lhs: f32 = 0.;
+    let mut rhs: f32 = 0.;
+    let mut stage: Stage = Stage::Start;
     while let Some(token) = token_iter.next() {
         if let Ok(num) = token.parse::<f32>() {
-            result += num;
+            if stage == Stage::Start {
+                lhs = num;
+                stage = Stage::LhsSet;
+            } else {
+                rhs = num;
+                stage = Stage::RhsSet;
+            }
             idx += 1;
             continue;
-        } 
+        }
         // very unsafe only correct if only ASCII chars are used!
         if OPS.contains(&(token.as_bytes()[0] as char)) {
             // search for next number
-            
+            op = token;
+            continue;
         }
         let jdx: usize = match token.as_str() {
             "(" => search_closing(")", &tokens[idx..], ")"),
             "[" => search_closing("]", &tokens[idx..], "]"),
             "{" => search_closing("}", &tokens[idx..], "}"),
+            _ => panic!("panic at search_closing for {}", token),
+        };
+
+        if stage == Stage::Start {
+            lhs = calculate(&tokens[idx..jdx], depth);
+            stage = Stage::LhsSet;
+        } else {
+            rhs = calculate(&tokens[idx..jdx], depth);
+            stage = Stage::RhsSet;
         }
-
-
-
+        if stage == Stage::LhsSet {
+            result = do_op(lhs, op, rhs);
+        }
     }
     result
 }
@@ -121,7 +152,8 @@ fn main() {
 
     let tokens = tokenize(calc_string);
 
-    let result = 1.2345 as f32;
+    let mut depth: u8 = 0;
+    let result = calculate(&tokens, &mut depth);
     // print the result with specified precision
     println!("{:.1$}", result, args.precision as usize);
 }
